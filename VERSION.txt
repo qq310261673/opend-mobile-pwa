@@ -1,3 +1,4 @@
-OpenD Mobile PWA V1.0
-Build: 2026-10-13
+OpenD Mobile PWA V1.1
+Build: 2026-10-14
+Change: remove iframe; open 5-minute dashboard as a top-level page; keep editable Tunnel URL.
 Scope: UI/PWA shell only; no OpenD scanner modifications.
