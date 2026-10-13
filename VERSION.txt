@@ -1,0 +1,3 @@
+OpenD Mobile PWA V1.0
+Build: 2026-10-13
+Scope: UI/PWA shell only; no OpenD scanner modifications.
