@@ -1,4 +1,4 @@
-const CACHE = 'opend-mobile-pwa-v1.1';
+const CACHE = 'opend-mobile-pwa-v1.2';
 const SHELL = [
   './',
   './index.html',
@@ -23,6 +23,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  if (url.pathname.endsWith('/config.json')) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
