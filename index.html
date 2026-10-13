@@ -26,65 +26,48 @@
     .source { margin:18px 0; padding:13px 14px; border-radius:13px; background:#0b1220; border:1px solid #263247; }
     .source-label { display:block; font-size:12px; color:#7f8da3; margin-bottom:6px; }
     .source-value { display:block; font-size:13px; color:#dbeafe; word-break:break-all; }
+    .status { margin-top:8px; font-size:12px; color:#94a3b8; }
+    .status.ok { color:#86efac; }
+    .status.bad { color:#fca5a5; }
     button { border:0; border-radius:13px; font-size:16px; font-weight:600; cursor:pointer; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
     .primary { width:100%; padding:15px 16px; background:#2563eb; color:#fff; }
     .secondary { width:100%; margin-top:10px; padding:13px 16px; background:#1f2937; color:#fff; border:1px solid #334155; }
-    .note { margin-top:16px; font-size:12px; color:#7f8da3; text-align:center; }
-    dialog { width:min(92vw,460px); border:0; border-radius:18px; padding:0; box-shadow:0 24px 80px rgba(0,0,0,.35); }
-    dialog::backdrop { background:rgba(0,0,0,.55); }
-    .dialog-body { padding:20px; background:#fff; color:#111827; }
-    .dialog-body h2 { margin:0 0 10px; font-size:20px; }
-    .hint { font-size:12px; color:#6b7280; line-height:1.55; margin-bottom:10px; }
-    input { width:100%; padding:12px; border:1px solid #d1d5db; border-radius:10px; font-size:16px; margin:8px 0 12px; background:#fff; color:#111827; }
-    .row { display:flex; gap:8px; }
-    .row button { flex:1; padding:11px 12px; font-size:14px; }
-    .save { background:#111827; color:#fff; }
-    .cancel { background:#e5e7eb; color:#111827; }
+    .note { margin-top:16px; font-size:12px; color:#7f8da3; text-align:center; line-height:1.55; }
   </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div class="brand">OpenD Mobile</div>
-    <div class="version">V1.1</div>
+    <div class="version">V1.2</div>
   </header>
 
   <main>
     <section class="card">
       <h1>5分钟看板</h1>
-      <p>直接打开当前 Cloudflare 看板，不再使用 iframe。这样不同 iPhone 的 Safari 隐私限制不会影响看板加载。</p>
+      <p>所有手机统一读取 GitHub 上的中央 Tunnel 地址。Cloudflare 地址以后变化时，只改一次中央配置即可。</p>
 
       <div class="source">
-        <span class="source-label">当前看板地址</span>
+        <span class="source-label">中央看板地址</span>
         <span id="currentUrl" class="source-value">读取中…</span>
+        <div id="status" class="status">正在读取中央配置…</div>
       </div>
 
-      <button id="openBtn" class="primary" type="button">进入5分钟看板</button>
-      <button id="settingsBtn" class="secondary" type="button">设置 Tunnel 地址</button>
-      <div class="note">这里只保存访问地址；不会修改 OpenD、冻结扫描器、Drive 或交易程序。</div>
+      <button id="openBtn" class="primary" type="button" disabled>进入5分钟看板</button>
+      <button id="refreshBtn" class="secondary" type="button">刷新中央地址</button>
+      <div class="note">中央地址来自 config.json；本页不再使用每台手机各自保存的 Tunnel 地址。不会修改 OpenD、冻结扫描器、Drive 或交易程序。</div>
     </section>
   </main>
 </div>
 
-<dialog id="settingsDialog">
-  <form method="dialog" class="dialog-body" id="settingsForm">
-    <h2>设置 Tunnel 地址</h2>
-    <div class="hint">Cloudflare Quick Tunnel 地址变化时，把新的 https://xxxx.trycloudflare.com 粘贴到这里即可。PWA 固定地址和桌面图标不用重装。</div>
-    <input id="urlInput" type="url" inputmode="url" autocomplete="off" placeholder="https://xxxx.trycloudflare.com" required />
-    <div class="row">
-      <button class="cancel" type="button" id="cancelBtn">取消</button>
-      <button class="save" type="submit">保存</button>
-    </div>
-  </form>
-</dialog>
-
 <script>
 (() => {
-  const DEFAULT_URL = 'https://flexibility-frame-madonna-indexes.trycloudflare.com';
-  const KEY = 'opend_mobile_dashboard_url_v1';
   const valueEl = document.getElementById('currentUrl');
-  const dialog = document.getElementById('settingsDialog');
-  const input = document.getElementById('urlInput');
+  const statusEl = document.getElementById('status');
+  const openBtn = document.getElementById('openBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
+  let centralUrl = '';
 
   function normalize(raw) {
     const value = (raw || '').trim();
@@ -92,46 +75,57 @@
     try {
       const u = new URL(value);
       if (u.protocol !== 'https:') return '';
+      if (u.origin === location.origin) return '';
       return u.href.replace(/\/$/, '');
-    } catch { return ''; }
-  }
-
-  function currentUrl() {
-    return normalize(localStorage.getItem(KEY)) || DEFAULT_URL;
-  }
-
-  function refreshLabel() {
-    valueEl.textContent = currentUrl();
-  }
-
-  function openSettings() {
-    input.value = currentUrl();
-    dialog.showModal();
-    setTimeout(() => input.focus(), 60);
-  }
-
-  document.getElementById('openBtn').addEventListener('click', () => {
-    window.location.assign(currentUrl());
-  });
-
-  document.getElementById('settingsBtn').addEventListener('click', openSettings);
-  document.getElementById('cancelBtn').addEventListener('click', () => dialog.close());
-
-  document.getElementById('settingsForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const clean = normalize(input.value);
-    if (!clean) {
-      input.setCustomValidity('请输入有效的 https:// 地址');
-      input.reportValidity();
-      return;
+    } catch {
+      return '';
     }
-    input.setCustomValidity('');
-    localStorage.setItem(KEY, clean);
-    dialog.close();
-    refreshLabel();
+  }
+
+  function setStatus(text, state='') {
+    statusEl.textContent = text;
+    statusEl.className = 'status' + (state ? ' ' + state : '');
+  }
+
+  async function loadCentralConfig() {
+    openBtn.disabled = true;
+    refreshBtn.disabled = true;
+    setStatus('正在读取中央配置…');
+    try {
+      const response = await fetch('./config.json?ts=' + Date.now(), { cache: 'no-store' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const data = await response.json();
+      const url = normalize(data.tunnel_url);
+      if (!url) throw new Error('中央 Tunnel 地址无效');
+      centralUrl = url;
+      valueEl.textContent = centralUrl;
+      setStatus('中央地址已同步', 'ok');
+      openBtn.disabled = false;
+      return centralUrl;
+    } catch (error) {
+      centralUrl = '';
+      valueEl.textContent = '暂时无法读取';
+      setStatus('中央配置读取失败，请稍后刷新', 'bad');
+      throw error;
+    } finally {
+      refreshBtn.disabled = false;
+    }
+  }
+
+  refreshBtn.addEventListener('click', () => {
+    loadCentralConfig().catch(() => {});
   });
 
-  refreshLabel();
+  openBtn.addEventListener('click', async () => {
+    try {
+      const url = await loadCentralConfig();
+      window.location.assign(url);
+    } catch {
+      alert('暂时无法读取中央看板地址，请稍后再试。');
+    }
+  });
+
+  loadCentralConfig().catch(() => {});
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
