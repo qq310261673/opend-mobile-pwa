@@ -1,4 +1,4 @@
-OpenD Mobile PWA V1.1
+OpenD Mobile PWA V1.2
 Build: 2026-10-14
-Change: remove iframe; open 5-minute dashboard as a top-level page; keep editable Tunnel URL.
+Change: all phones read one central Tunnel URL from config.json with cache bypass; no per-phone Tunnel setting required.
 Scope: UI/PWA shell only; no OpenD scanner modifications.
