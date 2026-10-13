@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="OpenD 看板" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <title>OpenD Mobile</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font-family: -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif; background: #0b1020; }
+    body { display: flex; flex-direction: column; overflow: hidden; }
+    header { height: 52px; display:flex; align-items:center; gap:10px; padding: env(safe-area-inset-top) 12px 0; background:#111827; color:#fff; border-bottom:1px solid rgba(255,255,255,.08); flex: 0 0 auto; }
+    .brand { font-weight: 700; letter-spacing:.2px; }
+    .status { margin-left:auto; font-size:12px; opacity:.78; }
+    button { border:0; border-radius:10px; padding:8px 10px; font-size:13px; cursor:pointer; }
+    .ghost { background:rgba(255,255,255,.10); color:#fff; }
+    main { position:relative; flex:1 1 auto; min-height:0; background:#fff; }
+    iframe { width:100%; height:100%; border:0; background:#fff; }
+    .overlay { position:absolute; inset:0; display:none; align-items:center; justify-content:center; padding:24px; background:#f6f7f9; color:#111827; text-align:center; }
+    .card { max-width:420px; width:100%; background:#fff; border-radius:18px; padding:22px; box-shadow:0 10px 40px rgba(0,0,0,.12); }
+    .card h2 { margin:0 0 10px; font-size:20px; }
+    .card p { margin:0 0 16px; line-height:1.55; color:#4b5563; }
+    .primary { width:100%; background:#111827; color:#fff; padding:11px 14px; }
+    dialog { width:min(92vw,460px); border:0; border-radius:18px; padding:0; box-shadow:0 24px 80px rgba(0,0,0,.28); }
+    dialog::backdrop { background:rgba(0,0,0,.45); }
+    .dialog-body { padding:20px; background:#fff; color:#111827; }
+    .dialog-body h3 { margin:0 0 12px; }
+    input { width:100%; padding:12px; border:1px solid #d1d5db; border-radius:10px; font-size:14px; margin:8px 0 12px; }
+    .row { display:flex; gap:8px; }
+    .row button { flex:1; }
+    .save { background:#111827; color:#fff; }
+    .cancel { background:#e5e7eb; color:#111827; }
+    .hint { font-size:12px; color:#6b7280; line-height:1.5; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">OpenD Mobile</div>
+    <div id="status" class="status">加载中…</div>
+    <button id="reloadBtn" class="ghost" type="button">刷新</button>
+    <button id="settingsBtn" class="ghost" type="button">设置</button>
+  </header>
+
+  <main>
+    <iframe id="board" title="OpenD 手机看板" referrerpolicy="no-referrer"></iframe>
+    <div id="overlay" class="overlay">
+      <div class="card">
+        <h2>看板地址尚未设置</h2>
+        <p>设置当前 Cloudflare 看板地址后即可加载。以后临时 Tunnel 地址变化，只需在 App 内更新地址，不需要重新安装桌面图标。</p>
+        <button id="overlaySettings" class="primary" type="button">设置看板地址</button>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="dialog-body" id="settingsForm">
+      <h3>看板地址</h3>
+      <div class="hint">只修改这个 PWA 本地保存的访问地址，不会修改 OpenD、扫描器、Drive 或任何交易程序。</div>
+      <input id="urlInput" type="url" inputmode="url" placeholder="https://xxxx.trycloudflare.com" required />
+      <div class="row">
+        <button class="cancel" value="cancel" type="button" id="cancelBtn">取消</button>
+        <button class="save" value="default" type="submit">保存并打开</button>
+      </div>
+    </form>
+  </dialog>
+
+<script>
+(() => {
+  const DEFAULT_URL = 'https://flexibility-frame-madonna-indexes.trycloudflare.com';
+  const KEY = 'opend_mobile_dashboard_url_v1';
+  const board = document.getElementById('board');
+  const overlay = document.getElementById('overlay');
+  const status = document.getElementById('status');
+  const dialog = document.getElementById('settingsDialog');
+  const input = document.getElementById('urlInput');
+
+  function normalize(raw) {
+    const value = (raw || '').trim();
+    if (!value) return '';
+    try {
+      const u = new URL(value);
+      if (!['http:', 'https:'].includes(u.protocol)) return '';
+      return u.href.replace(/\/$/, '');
+    } catch { return ''; }
+  }
+
+  function currentUrl() {
+    return normalize(localStorage.getItem(KEY)) || DEFAULT_URL;
+  }
+
+  function loadBoard(url) {
+    const clean = normalize(url);
+    if (!clean) {
+      overlay.style.display = 'flex';
+      status.textContent = '未设置';
+      board.removeAttribute('src');
+      return;
+    }
+    overlay.style.display = 'none';
+    status.textContent = '连接中…';
+    board.src = clean;
+  }
+
+  board.addEventListener('load', () => { status.textContent = '已加载'; });
+  document.getElementById('reloadBtn').addEventListener('click', () => loadBoard(currentUrl()));
+  document.getElementById('settingsBtn').addEventListener('click', openSettings);
+  document.getElementById('overlaySettings').addEventListener('click', openSettings);
+  document.getElementById('cancelBtn').addEventListener('click', () => dialog.close());
+
+  function openSettings() {
+    input.value = currentUrl();
+    dialog.showModal();
+    setTimeout(() => input.focus(), 60);
+  }
+
+  document.getElementById('settingsForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const clean = normalize(input.value);
+    if (!clean) {
+      input.setCustomValidity('请输入有效的 http/https 地址');
+      input.reportValidity();
+      return;
+    }
+    input.setCustomValidity('');
+    localStorage.setItem(KEY, clean);
+    dialog.close();
+    loadBoard(clean);
+  });
+
+  loadBoard(currentUrl());
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
+  }
+})();
+</script>
+</body>
+</html>
