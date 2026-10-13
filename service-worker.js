@@ -1,4 +1,4 @@
-const CACHE = 'opend-mobile-pwa-v1';
+const CACHE = 'opend-mobile-pwa-v1.1';
 const SHELL = [
   './',
   './index.html',
@@ -22,6 +22,22 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return; // 不缓存 OpenD/Cloudflare 看板数据
-  event.respondWith(caches.match(event.request).then((hit) => hit || fetch(event.request)));
+  if (url.origin !== self.location.origin) return;
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put('./index.html', copy));
+          return response;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((hit) => hit || fetch(event.request))
+  );
 });
