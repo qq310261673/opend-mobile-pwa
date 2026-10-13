@@ -1,6 +1,15 @@
-# OpenD Mobile PWA V1.0
+# OpenD Mobile PWA V1.1
 
 这是一个独立的手机 PWA 外壳，用来打开现有 OpenD 手机看板。
+
+## V1.1 变化
+
+- 保留固定 GitHub Pages 地址。
+- 保留“设置 Tunnel 地址”。
+- 删除 iframe 嵌入。
+- 增加“进入5分钟看板”按钮。
+- 点击按钮后，把当前 Cloudflare 看板地址作为顶层页面直接打开，规避部分 iPhone Safari 对跨站 iframe / Cookie 的限制。
+- Cloudflare Quick Tunnel 地址变化时，只需在 PWA 内更新地址，不需要重新安装桌面图标。
 
 ## 安全边界
 
@@ -11,42 +20,26 @@
 - SIGNAL-RECORDER
 - 交易/模型/预测模块
 
-它只在浏览器本地保存一个“手机看板 URL”，然后通过 iframe 加载该地址。
+它只在浏览器本地保存一个“手机看板 URL”，并在用户点击“进入5分钟看板”后直接跳转到该地址。
 
 ## 当前默认看板地址
 
 https://flexibility-frame-madonna-indexes.trycloudflare.com
 
-如果 Cloudflare Quick Tunnel 以后生成了新地址，不需要重新安装 PWA：打开 App 右上角“设置”，把新地址粘贴进去即可。
+## 固定 PWA 地址
 
-## 本地测试（Mac）
+https://qq310261673.github.io/opend-mobile-pwa/
 
-在本目录执行：
+## iPhone 使用方式
 
-```bash
-python3 -m http.server 8770 --bind 127.0.0.1
-```
+1. Safari 打开固定 PWA 地址。
+2. 点“分享” → “添加到主屏幕”。
+3. 以后从桌面“OpenD 看板”图标进入。
+4. 点“进入5分钟看板”直接打开当前看板。
+5. 如果 Cloudflare Quick Tunnel 地址变化，返回 PWA，点“设置 Tunnel 地址”，粘贴新地址并保存。
 
-然后在 Mac 浏览器打开：
+## V1.1 设计限制
 
-http://127.0.0.1:8770/
-
-说明：localhost 可以测试 PWA shell，但 iPhone 安装 PWA 需要 HTTPS。
-
-## iPhone 安装方式（推荐）
-
-把本文件夹部署到一个固定 HTTPS 静态站点（例如 GitHub Pages / Cloudflare Pages），然后：
-
-1. iPhone Safari 打开固定 HTTPS 地址。
-2. 点“分享”。
-3. 选择“添加到主屏幕”。
-4. 开启“作为网页 App 打开”（如果系统显示该选项）。
-5. 添加。
-
-以后桌面图标固定。Cloudflare 临时 Tunnel 地址变化时，只需在 App 内点“设置”更新看板 URL。
-
-## V1.0 设计限制
-
-- PWA 本身需要一个固定 HTTPS 托管地址才能实现“桌面 App 图标永久不变”。
-- 当前 OpenD 看板仍依赖 Cloudflare Quick Tunnel，因此后端 URL 可能变化。
-- 如果看板服务未来禁止 iframe 嵌入（例如设置 X-Frame-Options / CSP frame-ancestors），PWA 需要改为同源反向代理或固定 Tunnel 域名方案。
+- PWA 固定入口不变，但当前后端仍使用 Cloudflare Quick Tunnel，因此 Tunnel URL 未来仍可能变化。
+- Mac、本地 8766 看板服务和 Cloudflare Tunnel 必须处于运行状态，手机才能看到实时看板。
+- PWA 不自动修改、重启或控制 OpenD、扫描器、Drive 或任何交易程序。
